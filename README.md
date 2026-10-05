@@ -40,7 +40,7 @@ El código conserva una capa de compatibilidad de una etapa anterior basada en F
 ## Ejecutarlo localmente
 
 ```bash
-npm ci
+npm install
 cp .env.example .dev.vars
 npm run dev
 ```
