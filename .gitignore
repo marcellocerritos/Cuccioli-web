@@ -1,0 +1,45 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# builds / runtime
+/.next/
+/out/
+/dist/
+/firebase-dist/
+/.wrangler/
+/.sites-runtime/
+/outputs/
+/work/
+/coverage/
+*.tsbuildinfo
+
+# local/private data
+.env*
+!.env.example
+.dev.vars*
+/private/
+/upload/
+/imports/
+/runtime-assets/
+catalogo-publico.json
+
+# credentials — never commit
+*.pem
+*.key
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccountKey*.json
+*credentials*.json
+cuccioli-75a42-*.json
+
+# logs / editor / OS
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
