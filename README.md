@@ -1,6 +1,6 @@
 # Cuccioli
 
-Catálogo web para un negocio familiar de productos para mascotas en El Salvador.
+Catálogo web de productos para mascotas en El Salvador.
 
 Lo empecé para resolver un problema bastante simple: tener productos, marcas, presentaciones y precios organizados en una web que pudiera actualizarse sin tener que tocar el código cada vez. El sitio también permite llevar un producto directamente a WhatsApp para hacer el pedido.
 
