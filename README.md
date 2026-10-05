@@ -120,21 +120,6 @@ El proyecto conserva una capa de compatibilidad con una etapa anterior basada en
 
 Hay más detalle en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Lo que aprendí del proyecto
-
-La parte más útil de Cuccioli no fue solamente construir una página web. Fue aprender a convertir una necesidad bastante cotidiana en decisiones concretas de implementación.
-
-Algunas de las preguntas que tuve que resolver fueron:
-
-- ¿cómo organizar un catálogo que tiene marcas, submarcas, productos y varias presentaciones?;
-- ¿cómo evitar que el propietario tenga que depender de un desarrollador para cambiar un precio?;
-- ¿cómo hacer que las promociones sean fáciles de activar y desactivar?;
-- ¿cómo mantener una única fuente de información para clientes y administrador?;
-- ¿cómo diseñar el panel pensando en alguien que no está acostumbrado a trabajar con software administrativo?;
-- ¿cómo separar los secretos y credenciales del código que puede publicarse en GitHub?
-
-Ese enfoque fue cambiando el proyecto de “hacer una página con productos” a construir una herramienta que el negocio pudiera mantener en el día a día.
-
 ## Tecnologías
 
 - React
