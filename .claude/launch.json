@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite-firebase",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "vite.firebase.config.ts", "--port", "5180", "--strictPort"],
+      "port": 5180
+    }
+  ]
+}
