@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { api } from '@/lib/client';
 import { slug } from '@/lib/catalog';
+import { reservedCategoryPaths } from '@/lib/routes';
 import { findBrand, iconOptions, type CatalogBrand, type CatalogCategory } from '@/lib/taxonomy';
 import { useAdmin, AdminHeading, Loading, Field, Toggle, Choose, Spinner, ErrorNotice } from './cuccioli-admin';
 
@@ -36,7 +37,7 @@ function Organization({kind}:{kind:'brand'|'category'}){
   const draftBrand=editing&&'name' in editing?editing:null;const draftCategory=editing&&'title' in editing?editing:null;
   const filtered=items.filter(e=>slug(name(e)).includes(slug(search)));
   return <>
-    <AdminHeading eyebrow="ORGANIZÁ TU TIENDA" title={isBrand?'Marcas':'Categorías'} description={isBrand?'Administrá las marcas que distribuís, sus líneas y dónde aparecen.':'Creá las secciones de tu catálogo y elegí cuáles mostrar.'}><button className="btn btn-primary" onClick={add}><Plus size={18}/>{isBrand?'Agregar marca':'Agregar categoría'}</button></AdminHeading>
+    <AdminHeading eyebrow="Organizá tu tienda" title={isBrand?'Marcas':'Categorías'} description={isBrand?'Administrá las marcas que distribuís, sus líneas y dónde aparecen.':'Creá las secciones de tu catálogo y elegí cuáles mostrar.'}><button className="btn btn-primary" onClick={add}><Plus size={18}/>{isBrand?'Agregar marca':'Agregar categoría'}</button></AdminHeading>
     <div className="organization-intro"><p>Ocultar una {singular} también oculta sus productos en la tienda. Se conservan para volver a mostrarlos cuando quieras.</p><Link className="text-link" to={isBrand?'/admin/categorias':'/admin/marcas'}>{isBrand?'Administrar categorías':'Asignar marcas a categorías'}</Link></div>
     <div className="search-field organization-search"><Search size={19}/><Input className="field" aria-label={`Buscar ${singular}`} placeholder={`Buscar ${singular}…`} value={search} onChange={e=>setSearch(e.target.value)}/></div>
     {!editing&&!deleting&&<ErrorNotice text={error}/>}
@@ -46,7 +47,7 @@ function Organization({kind}:{kind:'brand'|'category'}){
       <div className="organization-card-actions"><label><Switch checked={entity.active} disabled={busy} aria-label={`Mostrar ${name(entity)}`} onCheckedChange={active=>void mutate({...entity,active})}/>Mostrar</label><div><button className="icon-button" disabled={busy} onClick={()=>edit(entity)} aria-label={`Editar ${name(entity)}`}><Pencil size={18}/></button><button className="icon-button delete" disabled={busy} onClick={()=>{setDeleting(entity);setError('');setRevision(t.revision);}} aria-label={`Eliminar ${name(entity)}`}><Trash2 size={18}/></button></div></div>
     </article>)}</div>{!filtered.length&&<div className="admin-panel organization-empty"><h2>No hay {isBrand?'marcas':'categorías'} en esta selección</h2><p>{search?'Probá con otro nombre.':`Usá el botón de arriba para agregar una ${singular}.`}</p></div>}
     <Dialog open={!!editing} onOpenChange={open=>{if(!open&&!busy)setEditing(null);}}><DialogContent className="organization-dialog" showCloseButton={!busy}><DialogHeader><DialogTitle>{items.some(e=>e.id===editing?.id)?'Editar':'Agregar'} {singular}</DialogTitle><DialogDescription>{isBrand?'Los nombres se actualizan en los productos sin perder sus precios ni imágenes.':'El nombre se actualiza en el menú y en los productos de esta categoría.'}</DialogDescription></DialogHeader>
-      <form onSubmit={(e:FormEvent)=>{e.preventDefault();if(editing)void mutate(editing,'save',revision);}}><fieldset disabled={busy} className="organization-fields">
+      <form onSubmit={(e:FormEvent)=>{e.preventDefault();if(!editing)return;if(draftCategory&&!t.categories.some(c=>c.id===draftCategory.id)&&reservedCategoryPaths.includes(slug(draftCategory.title))){setError('Ese nombre ya está en uso. Elegí otro nombre para la categoría.');return;}void mutate(editing,'save',revision);}}><fieldset disabled={busy} className="organization-fields">
         {draftBrand&&<>
           <Field label="Nombre de la marca"><Input aria-label="Nombre de la marca" className="field" required minLength={2} maxLength={100} value={draftBrand.name} placeholder="Ej. Purina" onChange={e=>setEditing({...draftBrand,name:e.target.value})}/></Field>
           <CategoryChecks label="Categorías donde se ofrece" categories={t.categories} selected={draftBrand.categoryIds} onChange={categoryIds=>setEditing({...draftBrand,categoryIds,subBrands:draftBrand.subBrands.map(s=>({...s,categoryIds:s.categoryIds.filter(c=>categoryIds.includes(c))}))})}/>
