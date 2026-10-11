@@ -6,11 +6,11 @@ Las fotos se descargaron a 1800 px y se convirtieron a WebP (máx. 1600 px, cali
 
 ## Foto del hero
 
-`cuccioli-hero.webp` está en `public/` (no en esta carpeta) y se usa solo en el hero de la portada. Se descargó a 2000 px y se convirtió a WebP (1600 × 1200 px, calidad 78, 64 KB), sin recortes ni retoques.
+`cuccioli-hero.webp` está en `public/` (no en esta carpeta) y se usa solo en el hero de la portada (1600 × 941 px, 130 KB). El 2026-10-11 la foto del perro y el gato en el pasto pasó del buscador al hero, y el buscador recibió una foto nueva.
 
 | Archivo | Dónde se usa | Página de la foto | Autor | Licencia | Fecha de descarga |
 |---|---|---|---|---|---|
-| public/cuccioli-hero.webp | Inicio · hero | https://unsplash.com/photos/O36ujE4ljzQ | Marcin Szmigiel (@kjuri) | Licencia Unsplash (verificada en la página: "Uso gratuito bajo la Licencia Unsplash", no es Unsplash+) | 2026-10-11 |
+| public/cuccioli-hero.webp | Inicio · hero | https://unsplash.com/photos/9gz3wfHr65U | Krista Mangulsone (@krista) | Licencia Unsplash | 2026-10-11 |
 
 ## Fotos editoriales (public/editorial/)
 
@@ -25,7 +25,7 @@ Fecha de descarga de todas: 2026-10-11.
 | inicio-comparacion.webp | Inicio · Con Cuccioli / Como siempre | https://unsplash.com/photos/bR97ghyap64 | Samantha Jean (@samanthadeestudio) | Licencia Unsplash |
 | inicio-cierre.webp | Inicio · Banda de cierre | https://unsplash.com/photos/-7-QGk-LZnA | panyawat auitpol (@tophuafu) | Licencia Unsplash |
 | menu.webp | Menú a pantalla completa | https://unsplash.com/photos/TsD3-ap897E | Mary Karletsoy (@mary_karletsoy) | Licencia Unsplash |
-| buscador-para-quien.webp | Buscador · ¿Para quién es? | https://unsplash.com/photos/9gz3wfHr65U | Krista Mangulsone (@krista) | Licencia Unsplash |
+| buscador-para-quien.webp | Buscador · ¿Para quién es? | https://unsplash.com/photos/rls2bfqYh8E | kevin turcios (@kevin_turcios) | Licencia Unsplash |
 | buscador-etapa.webp | Buscador · ¿En qué etapa está? | https://unsplash.com/photos/FnMh0z-IeBY | Reba Spike (@rebaspike) | Licencia Unsplash |
 | buscador-tamano.webp | Buscador · ¿De qué tamaño es? | https://unsplash.com/photos/wzLea0puhvI | Jakob P. (@jakobp_photography) | Licencia Unsplash |
 | buscador-marca.webp | Buscador · ¿Alguna marca preferida? | https://unsplash.com/photos/Coy8O5xhzAc | Lars Van Poucke (@larsvanpoucke) | Licencia Unsplash |

@@ -42,7 +42,7 @@ export const site = {
     subtitle: "Las marcas que ya conocés, con entrega a domicilio en El Salvador. Elegís, nos escribís y te lo llevamos.",
     cta: "Ver la tienda",
     secondary: "Encontrá su comida",
-    imageAlt: "Un Jack Russell sentado junto a un gato atigrado que descansa en el piso de casa",
+    imageAlt: "Un perro blanco y un gato gris se abrazan en el pasto",
   },
 
   audience: {

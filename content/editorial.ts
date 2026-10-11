@@ -16,7 +16,7 @@ export const editorialPhotos: Partial<Record<EditorialKey, EditorialPhoto>> = {
   compare: { src: "/editorial/inicio-comparacion.webp", alt: "Un corgi duerme cómodo en el sofá", width: 1357, height: 1600, position: "50% 50%" },
   closing: { src: "/editorial/inicio-cierre.webp", alt: "Un cachorro golden descansa con la barbilla en el piso", width: 1600, height: 1067, position: "50% 45%" },
   menu: { src: "/editorial/menu.webp", alt: "Un gato atigrado se estira al sol frente a una ventana", width: 1600, height: 1067, position: "40% 60%" },
-  finderPara: { src: "/editorial/buscador-para-quien.webp", alt: "Un perro blanco y un gato gris se abrazan en el pasto", width: 1600, height: 941, position: "45% 50%" },
+  finderPara: { src: "/editorial/buscador-para-quien.webp", alt: "Un gato gris tumbado en el piso alza la pata para tocar a un perro beige", width: 1143, height: 1600, position: "40% 68%" },
   finderEtapa: { src: "/editorial/buscador-etapa.webp", alt: "Un labrador senior de hocico canoso descansa en la alfombra", width: 1600, height: 1052, position: "45% 50%" },
   finderTamano: { src: "/editorial/buscador-tamano.webp", alt: "Un perrito blanco junto a un golden retriever", width: 1600, height: 1063, position: "55% 55%" },
   finderMarca: { src: "/editorial/buscador-marca.webp", alt: "Un gatito naranja juega en la cama", width: 1600, height: 1067, position: "48% 50%" },

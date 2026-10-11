@@ -16,7 +16,7 @@ function Hero() {
   const settings = useSettings();
   const title = settings.tagline === defaultSettings.tagline || !settings.cleanTagline ? site.hero.defaultTitle : settings.cleanTagline;
   return <section className="hero" aria-labelledby="hero-title">
-    <div className="hero-media"><img src="/cuccioli-hero.webp" alt={site.hero.imageAlt} width="1536" height="1024" fetchPriority="high" decoding="async" /></div>
+    <div className="hero-media"><img src="/cuccioli-hero.webp" alt={site.hero.imageAlt} width="1600" height="941" fetchPriority="high" decoding="async" /></div>
     <div className="hero-copy">
       <Headline as="h1" id="hero-title" text={title} className="hero-title" />
       <p className="hero-sub">{site.hero.subtitle}</p>
