@@ -74,27 +74,6 @@ async function handle(req: Request) {
   if (!pathname.startsWith("/api/admin/")) throw new HttpError(404,"No encontramos esta página.");
   const admin=await requireAdmin(req);
   if (pathname==="/api/admin/session" && req.method==="GET") return json({authenticated:true});
-  // TEMPORAL (migración a Cloudflare, aprobada por el dueño): copia el catálogo público y sus imágenes
-  // desde el backend anterior. Solo lee de un origen fijo; eliminar cuando la migración esté verificada.
-  if (pathname==="/api/admin/migrar-desde-backend-anterior" && req.method==="POST") {
-    const ORIGEN="https://cuccioli.m-cerritosal32007.chatgpt.site";
-    const res=await fetch(`${ORIGEN}/api/catalog`); if(!res.ok) throw new HttpError(502,"No se pudo leer el catálogo anterior.");
-    const old=await res.json() as {products:Product[];settings:Settings;taxonomy:unknown};
-    if(!Array.isArray(old.products)||!old.products.length||!old.settings||!old.taxonomy) throw new HttpError(502,"El catálogo anterior está incompleto.");
-    let imagenes=0;
-    for(const p of old.products){
-      const key=p.imageUrl?.startsWith("/api/images/")?p.imageUrl.split("/").pop()!:"";
-      if(!key||!/^[a-f0-9-]+\.(jpg|png|webp)$/.test(key)||await env.BUCKET.get(`products/${key}`)) continue;
-      const img=await fetch(`${ORIGEN}/api/images/${key}`); if(!img.ok) throw new HttpError(502,`No se pudo copiar la imagen ${key}.`);
-      await env.BUCKET.put(`products/${key}`,await img.arrayBuffer(),{httpMetadata:{contentType:img.headers.get("content-type")||"application/octet-stream"}});imagenes++;
-    }
-    const nuevos=new Set(old.products.map(p=>p.id));
-    for(const p of await listRecords<Product>("products")) if(!nuevos.has(p.id)) await deleteRecord("products",p.id);
-    for(const p of old.products) await putRecord("products",p.id,{...p});
-    await putRecord("settings","main",{...old.settings});
-    await putRecord("settings","catalog",old.taxonomy as Record<string,unknown>);
-    return json({ok:true,productos:old.products.length,imagenes});
-  }
   if (pathname==="/api/admin/data" && req.method==="GET") {
     const [products,settings,taxonomy]=await Promise.all([listRecords<Product>("products"),getRecord<Settings>("settings","main"),getTaxonomy()]);
     return json({ products:products.map(p=>projectProduct(p,taxonomy)).sort((a,b)=>a.order-b.order), settings, taxonomy, mode:firebaseEnabled()?"firebase":"preview" });
