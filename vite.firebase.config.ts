@@ -8,6 +8,6 @@ export default defineConfig({
   publicDir: `${root}public`,
   plugins: [react()],
   resolve: { alias: { "@": root } },
-  define: { __CUCCIOLI_API_ORIGIN__: JSON.stringify("https://cuccioli.m-cerritosal32007.chatgpt.site") },
+  define: { __CUCCIOLI_API_ORIGIN__: JSON.stringify("https://cuccioli-api.m-cerritosal32007.workers.dev") },
   build: { outDir: `${root}firebase-dist`, emptyOutDir: true },
 });
