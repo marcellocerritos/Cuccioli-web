@@ -6,10 +6,12 @@ import { apiOrigin, apiUrl, getSession, setSession } from "./hosting";
 import { defaultTaxonomy, projectProduct, productVisible, type Taxonomy } from "./taxonomy";
 export class ApiError extends Error { constructor(message:string, public status:number){super(message);} }
 export async function api<T=any>(path:string, method="GET", data?:unknown):Promise<T> {
-  const isForm=data instanceof FormData;
-  const headers:Record<string,string>=data&&!isForm?{"Content-Type":"application/json"}:{};
+  const isForm=data instanceof FormData;const isFile=data instanceof Blob;
+  const headers:Record<string,string>=isFile?{"Content-Type":(data as Blob).type||"application/octet-stream"}:data&&!isForm?{"Content-Type":"application/json"}:{};
   if(apiOrigin&&path.startsWith("/api/admin/")&&getSession())headers.Authorization=`Bearer ${getSession()}`;
-  const res=await fetch(apiUrl(path),{method,credentials:apiOrigin?"omit":"same-origin",headers,body:data?(isForm?data:JSON.stringify(data)):undefined});
+  let res:Response;
+  try{res=await fetch(apiUrl(path),{method,credentials:apiOrigin?"omit":"same-origin",headers,body:data?(isForm||isFile?data as BodyInit:JSON.stringify(data)):undefined});}
+  catch{throw new ApiError("No pudimos conectar con el servidor. Revisá tu conexión e intentá nuevamente.",0);}
   const result=await res.json().catch(()=>({error:"No pudimos conectar. Intentá nuevamente."}));
   if(!res.ok)throw new ApiError(result.error||"No pudimos completar la solicitud.",res.status);
   if(apiOrigin&&path==="/api/admin/login"&&typeof result.token==="string")setSession(result.token);

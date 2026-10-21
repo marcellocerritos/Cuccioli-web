@@ -117,9 +117,13 @@ async function handle(req: Request) {
   }
   if(pathname==="/api/admin/upload" && req.method==="POST") {
     if(Number(req.headers.get("content-length"))>5*1024*1024+65536) throw new HttpError(413,"La imagen debe pesar menos de 5 MB.");
-    const form=await req.formData(); const file=form.get("image");
-    if(!(file instanceof File)||!file.size||file.size>5*1024*1024) throw new HttpError(400,"Elegí una imagen JPG, PNG o WebP de hasta 5 MB.");
-    const bytes=await file.arrayBuffer();const b=new Uint8Array(bytes);
+    // El hosting del backend bloquea cuerpos multipart/form-data, así que el panel envía la imagen como binario crudo.
+    // Se mantiene multipart como respaldo por compatibilidad.
+    let bytes:ArrayBuffer;
+    if((req.headers.get("content-type")||"").startsWith("multipart/form-data")){const file=(await req.formData()).get("image");if(!(file instanceof File))throw new HttpError(400,"Elegí una imagen JPG, PNG o WebP de hasta 5 MB.");bytes=await file.arrayBuffer();}
+    else bytes=await req.arrayBuffer();
+    if(!bytes.byteLength||bytes.byteLength>5*1024*1024) throw new HttpError(400,"Elegí una imagen JPG, PNG o WebP de hasta 5 MB.");
+    const b=new Uint8Array(bytes);
     const format = b[0]===0xff&&b[1]===0xd8&&b[2]===0xff ? ["jpg","image/jpeg"] : b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71 ? ["png","image/png"] : new TextDecoder().decode(b.slice(0,4))==="RIFF"&&new TextDecoder().decode(b.slice(8,12))==="WEBP" ? ["webp","image/webp"] : null;
     if(!format)throw new HttpError(400,"El archivo no es una imagen JPG, PNG o WebP válida.");
     const key=`${crypto.randomUUID()}.${format[0]}`;let imageUrl:string;
