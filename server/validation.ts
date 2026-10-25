@@ -1,5 +1,5 @@
 import { z } from "zod";
-const safeImage = z.string().max(2048).refine(v=>v==="" || /^\/(placeholders\/[-a-z0-9]+\.svg|api\/images\/[a-f0-9-]+\.(png|jpg|webp)|catalog-images\/[-a-z0-9]+\.(png|jpg|webp))$/.test(v) || /^https:\/\/firebasestorage\.googleapis\.com\//.test(v), "Subí una imagen desde el formulario.");
+const safeImage = z.string().max(2048).refine(v=>v==="" || /^\/(placeholders\/[-a-z0-9]+\.svg|api\/images\/[a-f0-9-]+\.(png|jpg|webp))$/.test(v) || /^https:\/\/firebasestorage\.googleapis\.com\//.test(v), "Subí una imagen desde el formulario.");
 export const productSchema = z.object({
   brand: z.string().min(1).max(100), brandId: z.string().max(80).optional(), subBrand: z.string().trim().max(100), subBrandId: z.string().max(80).optional(), petType: z.string().regex(/^[a-z0-9-]{1,80}$/),
   name: z.string().trim().min(2,"Ingresá un nombre de al menos 2 caracteres.").max(160), description: z.string().trim().max(2000), specifications: z.string().trim().max(5000), imageUrl: safeImage,
