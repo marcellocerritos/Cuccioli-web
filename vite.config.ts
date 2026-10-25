@@ -16,8 +16,15 @@ const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_date: "2026-04-01",
   vars: { CUCCIOLI_PUBLIC_ORIGIN: "https://cuccioli-sv.web.app" },
-  observability: { enabled: true },
+  // Workers Logs: guarda cada solicitud y cada console.error para revisarlos en el panel de Cloudflare.
+  observability: { enabled: true, head_sampling_rate: 1 },
   compatibility_flags: ["nodejs_compat"],
+  // Límite por IP, en el borde de Cloudflare. Holgado a propósito: muchas conexiones móviles
+  // en El Salvador comparten IP. El login además tiene su propio límite estricto en D1.
+  ratelimits: [
+    { name: "API_LIMITER", namespace_id: "4201", simple: { limit: 120, period: 60 as const } },
+    { name: "IMAGE_LIMITER", namespace_id: "4202", simple: { limit: 600, period: 60 as const } },
+  ],
   d1_databases: d1
     ? [
         {

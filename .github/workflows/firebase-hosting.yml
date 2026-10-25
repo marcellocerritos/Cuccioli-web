@@ -1,5 +1,6 @@
 # Publica el frontend en Firebase Hosting (cuccioli-sv.web.app) cada vez que cambia main.
 # El backend (Cloudflare Worker cuccioli-api) se despliega aparte con Cloudflare Workers Builds.
+# Nada se publica si fallan las pruebas, si el bundle trae source maps/secretos o si falta una foto.
 name: Publicar frontend en Firebase
 
 on:
@@ -10,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: firebase-produccion
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,10 +23,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pruebas
+        run: npm test
       - run: npm run build:firebase
+      - name: Verificar bundle (sin source maps ni secretos)
+        run: node scripts/verificar-bundle.mjs
       - name: Verificar que todas las fotos del catálogo se van a ver
         run: node scripts/verificar-fotos.mjs
+      - name: Generar sitemap para Google
+        run: node scripts/generar-sitemap.mjs
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

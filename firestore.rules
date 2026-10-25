@@ -1,0 +1,13 @@
+rules_version = '2';
+// Cuccioli guarda todo en Cloudflare D1; Firestore NO se usa en el despliegue actual.
+// Por eso nadie puede leer ni escribir directo desde el navegador. Todo pasa por la API,
+// que valida la sesión del panel antes de cualquier cambio.
+// Si algún día se reactiva el modo Firestore, abrir SOLO lectura de lo público
+// (products, settings, taxonomy) y dejar escrituras cerradas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
