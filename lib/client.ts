@@ -35,7 +35,8 @@ export function useCatalog(admin=false) {
       import("./firebase-client").then(({listenToCatalog})=>{if(cancelled)return;stop=listenToCatalog(config,products=>{setData(prev=>prev?{...prev,products}:prev);setError("");},settings=>setData(prev=>prev?{...prev,settings}:prev),taxonomy=>setData(prev=>prev?{...prev,taxonomy}:prev),onError);}).catch(onError);
       return()=>{cancelled=true;stop?.();};
     }
-    const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},3500);
+    // Clientes: cada 60 s (antes 3.5 s → ~17 veces menos solicitudes). Panel: sigue casi en vivo.
+    const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},admin?3500:60000);
     const visible=()=>{if(document.visibilityState==="visible")void refresh();};document.addEventListener("visibilitychange",visible);
     return()=>{clearInterval(timer);document.removeEventListener("visibilitychange",visible);};
   },[admin,project,refresh]);

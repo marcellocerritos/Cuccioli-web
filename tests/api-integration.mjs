@@ -68,6 +68,35 @@ try {
   assert.equal((await request("/api/admin/data")).res.status,200);
   assert.equal((await request("/api/admin/products","POST",sample,true,"https://otro.test")).res.status,403);
   console.log("PASS · catálogo público, contraseña, sesión protegida y bloqueo de origen ajeno");
+
+  // --- Producción: salud, caché, límite de solicitudes, monitoreo y limpieza ---
+  const health=await request("/api/health");assert.equal(health.res.status,200);assert.equal(health.body.ok,true);assert.equal(health.res.headers.get("cache-control"),"no-store");
+  const first=await mf.dispatchFetch("https://cuccioli.test/api/catalog");const etag=first.headers.get("etag");
+  assert.ok(etag);assert.match(first.headers.get("cache-control"),/public, max-age=15/);
+  const notModified=await mf.dispatchFetch("https://cuccioli.test/api/catalog",{headers:{"If-None-Match":etag}});assert.equal(notModified.status,304);
+  const settingsNow=(await request("/api/admin/data")).body.settings;
+  assert.equal((await request("/api/admin/settings","PUT",{...settingsNow,tagline:"Probando la caché del catálogo"})).res.status,200);
+  const fresh=await request("/api/catalog");assert.equal(fresh.body.settings.tagline,"Probando la caché del catálogo","guardar en el panel vacía la caché");assert.notEqual(fresh.res.headers.get("etag"),etag);
+  assert.equal((await request("/api/admin/settings","PUT",settingsNow)).res.status,200);
+  const logged=[];const realError=console.error;console.error=(...a)=>logged.push(a.join(" "));
+  try{assert.equal((await request("/api/client-error","POST",{message:"x".repeat(5000),source:"app.js",line:3,path:"/catalogo"})).res.status,200);}finally{console.error=realError;}
+  assert.equal(logged.length,1);assert.ok(logged[0].length<1000,"el mensaje se recorta");
+  const preview="https://cuccioli-sv--pr-7-abc123.web.app";
+  const previewGet=await mf.dispatchFetch("https://cuccioli.test/api/catalog",{headers:{Origin:preview}});assert.equal(previewGet.headers.get("access-control-allow-origin"),preview);
+  assert.equal((await request("/api/admin/login","POST",{password:"prueba-local-no-publicar"},false,preview)).res.status,403,"el panel no funciona desde una vista previa");
+  const evil=await mf.dispatchFetch("https://cuccioli.test/api/catalog",{headers:{Origin:"https://cuccioli-sv--x.web.app.evil.test"}});assert.equal(evil.headers.get("access-control-allow-origin"),null);
+  let hits=0;binding.API_LIMITER={async limit({key}){hits++;assert.match(key,/^(public|admin):/);return {success:hits<=2};}};
+  try{
+    assert.equal((await request("/api/health")).res.status,200);assert.equal((await request("/api/health")).res.status,200);
+    const limited=await request("/api/health");assert.equal(limited.res.status,429);assert.equal(limited.res.headers.get("retry-after"),"60");assert.match(limited.body.error,/demasiadas solicitudes/);
+  }finally{delete binding.API_LIMITER;}
+  await db.prepare("INSERT INTO records(collection,id,value) VALUES ('sessions','vencida',?)").bind(JSON.stringify({expires:1,version:"x"})).run();
+  await db.prepare("INSERT INTO records(collection,id,value) VALUES ('loginAttempts','viejo',?)").bind(JSON.stringify({count:3,w:1})).run();
+  assert.equal((await request("/api/admin/login","POST",{password:"incorrecta"})).res.status,401);
+  assert.equal(await db.prepare("SELECT 1 FROM records WHERE collection='sessions' AND id='vencida'").first(),null,"sesiones vencidas se borran");
+  assert.equal(await db.prepare("SELECT 1 FROM records WHERE collection='loginAttempts' AND id='viejo'").first(),null,"intentos viejos se borran");
+  assert.ok(await db.prepare("SELECT 1 FROM records WHERE collection='sessions' AND id<>'vencida'").first(),"la sesión activa sigue");
+  console.log("PASS · producción: salud, caché con ETag que se vacía al guardar, límite 429, errores del navegador, vistas previas y limpieza de D1");
   const externalOrigin=binding.CUCCIOLI_PUBLIC_ORIGIN;
   const external=async(url,method="GET",data,token="",origin=externalOrigin)=>mf.dispatchFetch(`https://cuccioli.test${url}`,{method,headers:{Origin:origin,"Sec-Fetch-Site":"cross-site",...(token?{Authorization:`Bearer ${token}`} : {}),...(data?{"Content-Type":"application/json"}: {})},body:data?JSON.stringify(data):undefined});
   const preflight=await external("/api/admin/login","OPTIONS");assert.equal(preflight.status,204);assert.equal(preflight.headers.get("access-control-allow-origin"),externalOrigin);assert.match(preflight.headers.get("access-control-allow-headers"),/Authorization/);

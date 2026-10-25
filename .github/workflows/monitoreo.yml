@@ -1,0 +1,30 @@
+# Monitoreo gratuito: cada 30 minutos revisa que el sitio y la API respondan.
+# Si algo falla, GitHub marca la ejecución en rojo y te manda un correo automáticamente.
+# Ojo: GitHub pausa los workflows programados si el repo pasa 60 días sin actividad.
+name: Monitoreo del sitio
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sitio público responde
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 https://cuccioli-sv.web.app/)
+          echo "cuccioli-sv.web.app → $code"; test "$code" = "200"
+      - name: API y base de datos responden
+        run: |
+          body=$(curl -sf --max-time 20 https://cuccioli-api.m-cerritosal32007.workers.dev/api/health)
+          echo "$body"; echo "$body" | grep -q '"ok":true'
+      - name: Catálogo trae productos
+        run: |
+          n=$(curl -sf --max-time 20 https://cuccioli-api.m-cerritosal32007.workers.dev/api/catalog | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).products.length))')
+          echo "productos: $n"; test "$n" -gt 0

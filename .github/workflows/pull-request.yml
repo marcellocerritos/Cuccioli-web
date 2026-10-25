@@ -1,0 +1,39 @@
+# Cada pull request: pruebas + build + verificación, y una URL de vista previa
+# (cuccioli-sv--pr-N-xxxx.web.app) para revisar el cambio antes de pasarlo a main.
+# La vista previa lee el catálogo real pero el panel no funciona ahí (a propósito).
+name: Revisar pull request
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Pruebas
+        run: npm test
+      - run: npm run build:firebase
+      - name: Verificar bundle (sin source maps ni secretos)
+        run: node scripts/verificar-bundle.mjs
+      - name: Generar sitemap
+        run: node scripts/generar-sitemap.mjs
+      - name: Vista previa en Firebase (vence en 7 días)
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: cuccioli-75a42
+          expires: 7d

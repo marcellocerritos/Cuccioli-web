@@ -9,8 +9,28 @@ import type { Product, Settings } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 type Admin = { passwordHash: string; version: string };
 type Session = { expires: number; version: string };
-const trustedOrigin = () => (env as unknown as Record<string,string>).CUCCIOLI_PUBLIC_ORIGIN || "";
+type RateLimiter = { limit(options: { key: string }): Promise<{ success: boolean }> };
+const vars = () => env as unknown as Record<string, unknown>;
+const trustedOrigin = () => (vars().CUCCIOLI_PUBLIC_ORIGIN as string) || "";
 const isExternalClient = (req:Request) => !!trustedOrigin() && req.headers.get("origin") === trustedOrigin();
+// Canales de vista previa de Firebase (cuccioli-sv--<canal>.web.app): solo lectura pública, nunca el panel.
+const previewOrigin = (req:Request) => { const o = req.headers.get("origin") || ""; return /^https:\/\/cuccioli-sv--[a-z0-9-]{1,60}\.web\.app$/.test(o) ? o : ""; };
+const clientIp = (req:Request) => req.headers.get("cf-connecting-ip") || "unknown";
+
+// Caché del catálogo público dentro de cada instancia del Worker. Evita leer D1 en cada visita;
+// se vacía al guardar desde el panel (las otras instancias se actualizan solas al vencer).
+const CATALOG_TTL_MS = 20_000;
+let catalogCache: { body: string; etag: string; expires: number } | null = null;
+function clearCatalogCache() { catalogCache = null; }
+
+async function rateLimit(req: Request, pathname: string) {
+  const isImage = pathname.startsWith("/api/images/");
+  const limiter = vars()[isImage ? "IMAGE_LIMITER" : "API_LIMITER"] as RateLimiter | undefined;
+  if (!limiter || req.method === "OPTIONS") return;
+  const bucket = pathname.startsWith("/api/admin/") ? "admin" : isImage ? "images" : "public";
+  const { success } = await limiter.limit({ key: `${bucket}:${clientIp(req)}` });
+  if (!success) throw new HttpError(429, "Recibimos demasiadas solicitudes seguidas. Esperá un minuto e intentá nuevamente.");
+}
 function sessionToken(req:Request) {
   if(isExternalClient(req))return req.headers.get("authorization")?.match(/^Bearer ([a-f0-9]{64})$/)?.[1] || "";
   assertOrigin(req);
@@ -36,8 +56,14 @@ async function loginRate(req: Request) {
     const r = await firestoreRequest(":commit",{method:"POST",body:JSON.stringify({writes:[{transform:{document:`${documentRoot()}/loginAttempts/${key}`,fieldTransforms:[{fieldPath:"count",increment:{integerValue:"1"}}]}}]})});
     count=Number(r.writeResults?.[0]?.transformResults?.[0]?.integerValue || 99);
   } else {
-    const r = await env.DB.prepare("INSERT INTO records(collection,id,value) VALUES ('loginAttempts',?,json_object('count',1)) ON CONFLICT(collection,id) DO UPDATE SET value=json_object('count',json_extract(records.value,'$.count')+1) RETURNING value").bind(key).first<{value:string}>();
+    const windowId = Math.floor(Date.now()/900000);
+    const r = await env.DB.prepare("INSERT INTO records(collection,id,value) VALUES ('loginAttempts',?,json_object('count',1,'w',?)) ON CONFLICT(collection,id) DO UPDATE SET value=json_object('count',json_extract(records.value,'$.count')+1,'w',?) RETURNING value").bind(key,windowId,windowId).first<{value:string}>();
     count=JSON.parse(r!.value).count;
+    // Limpieza: intentos de ventanas viejas y sesiones vencidas no deben acumularse en D1.
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM records WHERE collection='loginAttempts' AND COALESCE(json_extract(value,'$.w'),0) < ?").bind(windowId-1),
+      env.DB.prepare("DELETE FROM records WHERE collection='sessions' AND json_extract(value,'$.expires') < ?").bind(Date.now()),
+    ]);
   }
   if (count>10) throw new HttpError(429,"Demasiados intentos. Esperá 15 minutos antes de volver a ingresar.");
 }
@@ -54,11 +80,31 @@ async function handle(req: Request) {
     const image = await env.BUCKET.get(`products/${key}`); if (!image) throw new HttpError(404,"Imagen no encontrada.");
     return new Response(image.body, { headers: { "Content-Type": image.httpMetadata?.contentType || "application/octet-stream", "Cache-Control": "public,max-age=31536000,immutable", "X-Content-Type-Options": "nosniff" } });
   }
-  await bootstrap();
-  if (pathname === "/api/catalog" && req.method === "GET") {
-    const [products, settings, taxonomy] = await Promise.all([listRecords<Product>("products"),getRecord<Settings>("settings","main"),getTaxonomy()]);
-    return json({ products: products.filter(p=>productVisible(p,taxonomy)).map(p=>projectProduct(p,taxonomy)).sort((a,b)=>a.order-b.order), settings, taxonomy, mode: firebaseEnabled()?"firebase":"preview", firebase:publicFirebaseConfig() });
+  if (pathname === "/api/health" && req.method === "GET") {
+    // Para monitoreo externo: confirma que el Worker responde y que D1 contesta.
+    const started = Date.now();
+    await env.DB.prepare("SELECT 1").first();
+    return json({ ok: true, db: "ok", ms: Date.now()-started, time: new Date().toISOString() });
   }
+  if (pathname === "/api/client-error" && req.method === "POST") {
+    // Errores del navegador → Workers Logs. Solo texto corto; nunca datos del cliente.
+    const data = await body(req);
+    const clip = (v: unknown, n: number) => typeof v === "string" ? v.slice(0, n) : undefined;
+    console.error("client-error", JSON.stringify({ message: clip(data.message,300), source: clip(data.source,200), line: typeof data.line==="number"?data.line:undefined, path: clip(data.path,200), ua: clip(req.headers.get("user-agent"),160) }));
+    return json({ ok: true });
+  }
+  if (pathname === "/api/catalog" && req.method === "GET") {
+    if (!catalogCache || catalogCache.expires < Date.now()) {
+      await bootstrap();
+      const [products, settings, taxonomy] = await Promise.all([listRecords<Product>("products"),getRecord<Settings>("settings","main"),getTaxonomy()]);
+      const payload = JSON.stringify({ products: products.filter(p=>productVisible(p,taxonomy)).map(p=>projectProduct(p,taxonomy)).sort((a,b)=>a.order-b.order), settings, taxonomy, mode: firebaseEnabled()?"firebase":"preview", firebase:publicFirebaseConfig() });
+      catalogCache = { body: payload, etag: `"${(await digest(payload)).slice(0,32)}"`, expires: Date.now()+CATALOG_TTL_MS };
+    }
+    const headers = { "Content-Type": "application/json", "Cache-Control": "public, max-age=15, stale-while-revalidate=45", "ETag": catalogCache.etag, "X-Content-Type-Options": "nosniff" };
+    if (req.headers.get("if-none-match") === catalogCache.etag) return new Response(null, { status: 304, headers });
+    return new Response(catalogCache.body, { status: 200, headers });
+  }
+  await bootstrap();
   if (pathname === "/api/admin/login" && req.method === "POST") {
     await loginRate(req); const data = await body(req);
     const admin = await getRecord<Admin>("private","admin");
@@ -134,7 +180,12 @@ async function handle(req: Request) {
 }
 async function route(req:Request) {
   let response:Response;
-  try { response=await handle(req); } catch(e) {
+  const pathname=new URL(req.url).pathname.replace(/\/$/,"");
+  try {
+    await rateLimit(req,pathname);
+    response=await handle(req);
+    if(pathname.startsWith("/api/admin/")&&!["GET","HEAD","OPTIONS"].includes(req.method)&&response.ok)clearCatalogCache();
+  } catch(e) {
     if(e instanceof HttpError)response=json({error:e.message},e.status);
     else { console.error("Cuccioli request failed",e instanceof Error ? e.message : "unknown");response=json({error:req.method==="GET"?"No pudimos cargar la información. Intentá nuevamente.":"No pudimos completar la solicitud. Tus cambios no se han guardado. Intentá nuevamente."},503); }
   }
@@ -145,7 +196,10 @@ async function route(req:Request) {
     response.headers.set("Access-Control-Allow-Headers","Content-Type, Authorization");
     response.headers.set("Access-Control-Max-Age","600");
     response.headers.delete("Set-Cookie");
+  } else if(previewOrigin(req)&&req.method==="GET"&&!pathname.startsWith("/api/admin/")) {
+    response.headers.set("Access-Control-Allow-Origin",previewOrigin(req));
   }
+  if(response.status===429)response.headers.set("Retry-After","60");
   return response;
 }
 export const GET=route;export const POST=route;export const PUT=route;export const DELETE=route;export const OPTIONS=route;

@@ -9,5 +9,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { "@": root } },
   define: { __CUCCIOLI_API_ORIGIN__: JSON.stringify("https://cuccioli-api.m-cerritosal32007.workers.dev") },
-  build: { outDir: `${root}firebase-dist`, emptyOutDir: true },
+  // Producción: código minificado y SIN source maps (nadie puede reconstruir el código original).
+  // El CI falla si aparece cualquier .map en firebase-dist.
+  build: { outDir: `${root}firebase-dist`, emptyOutDir: true, sourcemap: false, minify: true },
 });
